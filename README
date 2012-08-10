@@ -1,5 +1,13 @@
+===================
+= MissileLauncher =
+==================
+
+A hotspot tracking missile launcher control program using a Wiimote for hotspot
+detection by Edward Woolhouse.
+
 Licensed under the GPL v3, inherited from wiiuse. See LICENSE for 
 the usual details.
+
 
 
 
@@ -53,4 +61,20 @@ sudo ./missilelauncher
 You need root to run it as we detach a kernel driver from the USB missile 
 launcher in order to take control ourselves.
 
-Voila, missile launcher. Have fun.
+Voila, missile launcher. Have fun. Do fun stuff with it. 
+Make it better (and remember to publish your changes!)
+Email me for help - danishcake@hotmail.com
+
+Extensions: 
+
+Add proper hotspot correlation - correlate the hotspot input each frame
+with the previous and build a 'track'. This should help prevent the tracking
+code from 'wandering off'.
+
+Add automatic search behaviour when in hotspot tracking mode but not seeing any
+hotspots - scan left/right and up/down to find a hotspot to lock onto.
+
+Add a GUI - text mode would be awesome. ncurses?
+
+Wrap the tracking library in python. See libmissile/Python.cpp for example on how.
+
