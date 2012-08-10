@@ -34,11 +34,11 @@ sudo apt-get install cmake libusb-1.0-0-dev libboost1.50-all-dev bluez libblueto
 
 Now you need to install wiiuse, the library used to interface with the 
 Wiimote. This is not in the standard repositories, so we can't just apt-get it.
-Instead the source is bundled in the wiiuse subfolder.
+Instead the source can be downloaded and built.
 
-Navigate to the wiiuse folder, build it and install it
+Navigate to the wiiuse folder, download it, build it and install it
 
-cd wiiuse
+git clone https://github.com/rpavlik/wiiuse.git
 mkdir build
 cd build
 cmake ..
