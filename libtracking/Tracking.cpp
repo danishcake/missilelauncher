@@ -1,8 +1,10 @@
-
 #include "Tracking.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <cmath>
+#include <string>
+#include <time.h>
+#include <boost/lexical_cast.hpp>
 
 #ifndef WIN32
 	#include <unistd.h>
@@ -23,32 +25,55 @@ namespace ControlMode
 
 static ControlMode::Enum   sControlMode = ControlMode::Off;
 static ControlResult       sResult;
+static bool                sTrackValid = false;
 static wiimote**           sWiimotes = 0;
-static int                 sTrackAge = 100;
+static clock_t             sTrackAge;
+static int                 sSensitivity = 3;
+
+extern void Log(std::string);
 
 void change_control_mode(ControlMode::Enum cm)
 {
    if (cm == ControlMode::Seeking && sControlMode != ControlMode::Seeking)
    {
-      Log("Switching to seeker mode");
+      Log("Switching to seeker mode\n");
+      sTrackValid = false;
       sControlMode = ControlMode::Seeking;
    }
 
    if (cm == ControlMode::Slaved && sControlMode != ControlMode::Slaved)
    {
-      Log("Switching to slaved mode");
+      Log("Switching to slaved mode\n");
+      sTrackValid = false;
       sControlMode = ControlMode::Slaved;
    }
    
    if (cm == ControlMode::Off && sControlMode != ControlMode::Off)
    {
-      Log("Switching to off mode");
+      Log("Switching to off mode\n");
+      sTrackValid = false;
       sControlMode = ControlMode::Off;
    }
 }
 
 void handle_event(struct wiimote_t* wm)
 {
+   if (IS_PRESSED(wm, WIIMOTE_BUTTON_PLUS))
+   {
+      sSensitivity++;
+      if (sSensitivity > 5) sSensitivity = 5;
+      wiiuse_set_ir_sensitivity(wm, sSensitivity);
+      Log("Sensitivity set to " + boost::lexical_cast<std::string, int>(sSensitivity) + "\n");
+   }
+   if (IS_PRESSED(wm, WIIMOTE_BUTTON_MINUS))
+   {
+      sSensitivity--;
+      if (sSensitivity < 0) sSensitivity = 0;
+      wiiuse_set_ir_sensitivity(wm, sSensitivity);
+      Log("Sensitivity set to " + boost::lexical_cast<std::string, int>(sSensitivity) + "\n");
+   }
+
+
    // Button A switches to track mode
    if (IS_PRESSED(wm, WIIMOTE_BUTTON_A))
    {
@@ -96,23 +121,17 @@ void handle_event(struct wiimote_t* wm)
    {
       if (wm->ir.num_dots > 0)
       {
-         sResult.steering_demand.x = 512 - (float)wm->ir.x;
-         sResult.steering_demand.y = 384 - (float)wm->ir.y;
+         sResult.steering_demand.x = 512 - (float)wm->ir.ax;
+         sResult.steering_demand.y = 384 - (float)wm->ir.ay;
          sResult.steering_demand.z = -1;
-         // Dead zone of 100 (20%)
-         if (fabs(sResult.steering_demand.x) < 100) sResult.steering_demand.x = 0;
-         if (fabs(sResult.steering_demand.y) < 100) sResult.steering_demand.y = 0;
-         sTrackAge = 0;
-
-         printf("%d dots (%d, %d, %d)\n", wm->ir.num_dots, wm->ir.x, wm->ir.y, wm->ir.z); 
-      }
-
-      sTrackAge++;
-      if (sTrackAge == 50)
-      {
-         sResult.steering_demand.x = 0;
-         sResult.steering_demand.y = 0;
-         printf("Lost track"); 
+         // Dead zone of 25
+         if (fabs(sResult.steering_demand.x) < 50) sResult.steering_demand.x = 0;
+         if (fabs(sResult.steering_demand.y) < 50) sResult.steering_demand.y = 0;
+         sTrackValid = true;
+         sTrackAge = clock();
+         Log(boost::lexical_cast<std::string, int>(wm->ir.num_dots) + " dots. Centre (" + 
+             boost::lexical_cast<std::string, int>(wm->ir.ax) + "," +
+             boost::lexical_cast<std::string, int>(wm->ir.ay) + ")\n");
       }
    }
 
@@ -120,6 +139,7 @@ void handle_event(struct wiimote_t* wm)
 
 void InitRemote()
 {
+   sTrackAge = clock();
    if (sWiimotes == 0)
    {
       sWiimotes = wiiuse_init(1);
@@ -162,8 +182,9 @@ ControlResult TickRemote()
             change_control_mode(ControlMode::Slaved);
             wiiuse_set_leds(sWiimotes[0], WIIMOTE_LED_1);
             wiiuse_motion_sensing(sWiimotes[0], 0);
+            usleep(10000);
             wiiuse_set_ir(sWiimotes[0], 1);
-            wiiuse_set_ir_sensitivity(sWiimotes[0], 5);
+            wiiuse_set_ir_sensitivity(sWiimotes[0], 1);
          }
       }
    }
@@ -197,6 +218,18 @@ ControlResult TickRemote()
 
          default:
             break;
+      }
+   }
+
+   if (sControlMode == ControlMode::Seeking)
+   {
+      clock_t current_time = clock();
+      if (current_time > sTrackAge + CLOCKS_PER_SEC && sTrackValid)
+      {
+         sResult.steering_demand.x = 0;
+         sResult.steering_demand.y = 0;
+         sTrackValid = false;
+         Log("Lost track"); 
       }
    }
    

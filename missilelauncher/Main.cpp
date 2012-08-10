@@ -10,13 +10,15 @@ int Log(const char* msg)
 }
 
 #ifdef WIN32
-void sleep(unsigned int mseconds)
+void msleep(unsigned int mseconds)
 {
     clock_t goal = mseconds + clock();
     while (goal > clock());
 }
 #endif
 
+
+static bool last_action_stop = false;
 int main(int argc, char* argv[])
 {
    int device_count = 0;
@@ -32,45 +34,55 @@ int main(int argc, char* argv[])
          if (cr.steering_demand.x < 0 && cr.steering_demand.y == 0)
          {
             PerformAction(Action::RotateLeft);
+            last_action_stop = false;
          }
          if (cr.steering_demand.x > 0 && cr.steering_demand.y == 0)
          {
             PerformAction(Action::RotateRight);
+            last_action_stop = false;
          }
          if (cr.steering_demand.x == 0 && cr.steering_demand.y < 0)
          {
             PerformAction(Action::RotateUp);
+            last_action_stop = false;
          }
          if (cr.steering_demand.x == 0 && cr.steering_demand.y > 0)
          {
             PerformAction(Action::RotateDown);
+            last_action_stop = false;
          }
 
          if (cr.steering_demand.x < 0 && cr.steering_demand.y < 0)
          {
             PerformAction(Action::RotateLeftUp);
+            last_action_stop = false;
          }
          if (cr.steering_demand.x > 0 && cr.steering_demand.y > 0)
          {
             PerformAction(Action::RotateRightDown);
+            last_action_stop = false;
          }
          if (cr.steering_demand.x < 0 && cr.steering_demand.y > 0)
          {
             PerformAction(Action::RotateLeftDown);
+            last_action_stop = false;
          }
          if (cr.steering_demand.x > 0 && cr.steering_demand.y < 0)
          {
             PerformAction(Action::RotateRightUp);
+            last_action_stop = false;
          }
-         if (cr.steering_demand.x == 0 && cr.steering_demand.y == 0)
+         if (cr.steering_demand.x == 0 && cr.steering_demand.y == 0 && !last_action_stop)
          {
+            last_action_stop = true;
             PerformAction(Action::Stop);
          }
          if (cr.fire)
          {
             PerformAction(Action::Fire);
+            last_action_stop = false;
          }
-         usleep(1000 * 10);
+         //usleep(1000 * 50);
       }
    }
    else

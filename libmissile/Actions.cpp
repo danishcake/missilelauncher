@@ -55,7 +55,7 @@ bool PerformAction(Action::Enum action, int device_index)
              (errnum = libusb_control_transfer(*it, 0x21, 0x09, 0x02, 0x01, INITB, sizeof(INITA), 1000) < 0) ||
              (errnum = libusb_control_transfer(*it, 0x21, 0x09, 0x02, 0x01, command_buffer, 64, 1000)))
          {
-            Log(std::string("Unable to write command to device") + libusb_error_name(errnum));
+//            Log(std::string("Unable to write command to device") + libusb_error_name(errnum));
          }
       }
    }
