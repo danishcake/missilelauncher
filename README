@@ -1,0 +1,56 @@
+Licensed under the GPL v3, inherited from wiiuse. See LICENSE for 
+the usual details.
+
+
+
+This is a little project that uses a USB missile launcher (of the type sold 
+at Play.com) and a Wiimote to give you a hotspot tracking missile launcher. 
+You can also control it with the wiimote dpad.
+
+Controls:
+dpad: change angle
+A:    switch to IR hotspot tracking
+B:    FIRE!
++-:   Increase/decrease IR sensitivity
+
+
+Building:
+You will need boost, libusb, bluez, libbluetooth-dev and cmake installed. 
+
+Assuming you are running Raspbian this should be relatively simple. You can 
+just use the standard debian method to install the dependancies
+
+From memory I think the commands are:
+
+sudo apt-get install cmake libusb-1.0-0-dev libboost1.50-all-dev bluez libbluetooth-dev
+
+Now you need to install wiiuse, the library used to interface with the 
+Wiimote. This is not in the standard repositories, so we can't just apt-get it.
+Instead the source is bundled in the wiiuse subfolder.
+
+Navigate to the wiiuse folder, build it and install it
+
+cd wiiuse
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+
+Now we need to build the missile launcher. This is also built with cmake,
+so the routine is very similar. Go to the project root
+
+cd ..
+mkdir build
+cmake ..
+make
+
+Now we can run it
+cd missilelauncher
+sudo ./missilelauncher
+
+
+You need root to run it as we detach a kernel driver from the USB missile 
+launcher in order to take control ourselves.
+
+Voila, missile launcher. Have fun.
