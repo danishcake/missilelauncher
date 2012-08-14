@@ -2,6 +2,9 @@
 #include <time.h>
 #include <Missile.h>
 #include <Tracking.h>
+#include <unistd.h>
+#include <cstdlib>
+#include <sys/stat.h>
 
 int Log(const char* msg)
 {
@@ -21,6 +24,27 @@ void msleep(unsigned int mseconds)
 static bool last_action_stop = false;
 int main(int argc, char* argv[])
 {
+
+   /* Launch as daemon */
+   pid_t pid, sid;
+   pid = fork();
+   if (pid < 0)
+   {
+      exit(EXIT_FAILURE);
+   }
+   if (pid > 0)
+   {
+      exit(EXIT_SUCCESS);
+   }
+   umask(0);
+   sid = setsid();
+   if (sid < 0) 
+   {
+      /* Log any failure */
+      exit(EXIT_FAILURE);
+   }
+
+
    int device_count = 0;
    InitRemote();
    if(device_count = InitialiseUSBControl(&Log))
