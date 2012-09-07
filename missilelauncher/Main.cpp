@@ -44,6 +44,13 @@ int main(int argc, char* argv[])
       exit(EXIT_FAILURE);
    }
 
+   /* Change the current working directory */
+   if ((chdir("/")) < 0)
+   {
+      /* Log any failure here */
+      exit(EXIT_FAILURE);
+   }
+
 
    int device_count = 0;
    InitRemote();

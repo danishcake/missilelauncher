@@ -19,7 +19,7 @@ namespace ControlMode
 {
    enum Enum
    {
-      Off, Seeking, Slaved
+      Off, Seeking, Searching, Slaved
    };
 }
 
@@ -29,6 +29,8 @@ static bool                sTrackValid = false;
 static wiimote**           sWiimotes = 0;
 static clock_t             sTrackAge;
 static int                 sSensitivity = 3;
+static clock_t             sSearchDirectionChangeTime;
+static int                 sSearchDirection = 1;
 
 extern void Log(std::string);
 
@@ -47,7 +49,14 @@ void change_control_mode(ControlMode::Enum cm)
       sTrackValid = false;
       sControlMode = ControlMode::Slaved;
    }
-   
+
+   if (cm == ControlMode::Searching && sControlMode != ControlMode::Searching)
+   {
+      Log("Switching to search mode\n");
+      sTrackValid = false;
+      sControlMode = ControlMode::Searching;
+   }
+
    if (cm == ControlMode::Off && sControlMode != ControlMode::Off)
    {
       Log("Switching to off mode\n");
@@ -117,7 +126,7 @@ void handle_event(struct wiimote_t* wm)
     *
     *	Also make sure that we see at least 1 dot.
     */
-   if (sControlMode == ControlMode::Seeking)
+   if (sControlMode == ControlMode::Seeking || sControlMode == ControlMode::Searching)
    {
       if (wm->ir.num_dots > 0)
       {
@@ -128,7 +137,9 @@ void handle_event(struct wiimote_t* wm)
          if (fabs(sResult.steering_demand.x) < 50) sResult.steering_demand.x = 0;
          if (fabs(sResult.steering_demand.y) < 50) sResult.steering_demand.y = 0;
          sTrackValid = true;
+         change_control_mode(ControlMode::Seeking);
          sTrackAge = clock();
+
          Log(boost::lexical_cast<std::string, int>(wm->ir.num_dots) + " dots. Centre (" + 
              boost::lexical_cast<std::string, int>(wm->ir.ax) + "," +
              boost::lexical_cast<std::string, int>(wm->ir.ay) + ")\n");
@@ -182,9 +193,9 @@ ControlResult TickRemote()
             change_control_mode(ControlMode::Slaved);
             wiiuse_set_leds(sWiimotes[0], WIIMOTE_LED_1);
             wiiuse_motion_sensing(sWiimotes[0], 0);
-            usleep(10000);
+            usleep(100000);
             wiiuse_set_ir(sWiimotes[0], 1);
-            wiiuse_set_ir_sensitivity(sWiimotes[0], 1);
+            wiiuse_set_ir_sensitivity(sWiimotes[0], 3);
          }
       }
    }
@@ -221,17 +232,38 @@ ControlResult TickRemote()
       }
    }
 
+   clock_t current_time = clock();
    if (sControlMode == ControlMode::Seeking)
    {
-      clock_t current_time = clock();
-      if (current_time > sTrackAge + CLOCKS_PER_SEC && sTrackValid)
+      if (current_time > sTrackAge + 0.25 * CLOCKS_PER_SEC && sTrackValid)
       {
          sResult.steering_demand.x = 0;
          sResult.steering_demand.y = 0;
          sTrackValid = false;
-         Log("Lost track"); 
+         Log("Lost track\n"); 
+      }
+
+      if (current_time > sTrackAge + 1 * CLOCKS_PER_SEC)
+      {
+         change_control_mode(ControlMode::Searching);
+         sSearchDirectionChangeTime = current_time + 2 * CLOCKS_PER_SEC;
+         sSearchDirection = 1;
       }
    }
+
+   if (sControlMode == ControlMode::Searching)
+   {
+      if (current_time > sSearchDirectionChangeTime)
+      {
+         sSearchDirectionChangeTime = current_time + 2 * CLOCKS_PER_SEC;
+         Log("Turning\n"); 
+         sSearchDirection *= -1;
+      }
+      sResult.steering_demand.x = sSearchDirection;
+      sResult.steering_demand.y = 0;
+      sResult.steering_demand.z = -1;
+
+   } 
    
    return sResult;
 }
